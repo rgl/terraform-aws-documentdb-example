@@ -7,9 +7,12 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -40,6 +43,8 @@ func dumpMachineNetworkAddresses() {
 }
 
 func handler(ctx context.Context, event events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 	client, err := connectToMongoDB(ctx)
 	if err != nil {
 		return events.APIGatewayV2HTTPResponse{}, err
@@ -69,9 +74,35 @@ func handler(ctx context.Context, event events.APIGatewayV2HTTPRequest) (events.
 
 // see Connecting Programmatically to Amazon DocumentDB at https://docs.aws.amazon.com/documentdb/latest/developerguide/connect_programmatically.html#connect_programmatically-tls_enabled
 func connectToMongoDB(ctx context.Context) (*mongo.Client, error) {
-	connectionString := os.Getenv("EXAMPLE_DOCDB_CONNECTION_STRING")
+	connectionString := ""
+
+	connectionStringSecretID := os.Getenv("EXAMPLE_DOCDB_CONNECTION_STRING_SECRET_ID")
+	if connectionStringSecretID != "" {
+		connectionStringSecretRegion := os.Getenv("EXAMPLE_DOCDB_CONNECTION_STRING_SECRET_REGION")
+		if connectionStringSecretRegion == "" {
+			return nil, fmt.Errorf("the EXAMPLE_DOCDB_CONNECTION_STRING_SECRET_REGION environment variable is not set")
+		}
+
+		cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(connectionStringSecretRegion))
+		if err != nil {
+			return nil, fmt.Errorf("failed to load default config: %w", err)
+		}
+		client := secretsmanager.NewFromConfig(cfg)
+		secret, err := client.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
+			SecretId: &connectionStringSecretID,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get secret value: %w", err)
+		}
+		connectionString = *secret.SecretString
+	}
+
 	if connectionString == "" {
-		return nil, fmt.Errorf("the EXAMPLE_DOCDB_CONNECTION_STRING environment variable is not set")
+		connectionString = os.Getenv("EXAMPLE_DOCDB_CONNECTION_STRING")
+	}
+
+	if connectionString == "" {
+		return nil, fmt.Errorf("the EXAMPLE_DOCDB_CONNECTION_STRING_SECRET_ID or EXAMPLE_DOCDB_CONNECTION_STRING environment variable is not set")
 	}
 
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(connectionString))

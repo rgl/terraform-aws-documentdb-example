@@ -13,12 +13,15 @@ This will:
     return its modified value.
   * Create the `counters` database.
   * Create the `hits` database collection.
+  * Get the database credentials from a Secret.
+    * The Secret is stored in [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/).
   * Upload it to the [Amazon ECR](https://aws.amazon.com/ecr/).
 * Create an [Amazon API Gateway](https://aws.amazon.com/api-gateway/).
   * Configure it to use the Go AWS Lambda Function.
 * Create a VPC and all the required plumbing required for the Go AWS Lambda
   Function to use an Amazon DocumentDB Database instance.
   * Make the Document DB Database instance available in a [VPC database subnet](https://docs.aws.amazon.com/documentdb/latest/developerguide/document-db-subnet-groups.html).
+  * Make the Secrets Manager service endpoint available as a [VPC Endpoint](https://docs.aws.amazon.com/whitepapers/latest/aws-privatelink/what-are-vpc-endpoints.html).
 
 # Usage (on a Ubuntu Desktop)
 
@@ -122,3 +125,9 @@ List this repository dependencies (and which have newer versions):
 ```bash
 GITHUB_COM_TOKEN='YOUR_GITHUB_PERSONAL_TOKEN' ./renovate.sh
 ```
+
+# Notes
+
+* There is no way to use an AWS IAM Role to authenticate as a DocumentDB User.
+  * This means we cannot use the Lambda Function IAM Role as a password-less
+    authentication mechanism. So, we must manage the DocumentDB User password.

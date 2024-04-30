@@ -20,6 +20,19 @@ resource "random_password" "example_docdb_master_password" {
   override_special = "!#$%&*()-_=+[]{}<>:?" # NB cannot contain /"@
 }
 
+# see https://repost.aws/knowledge-center/delete-secrets-manager-secret
+# see https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret
+resource "aws_secretsmanager_secret" "example_docdb_master_secret" {
+  name_prefix             = "${var.name_prefix}-docdb-master-"
+  recovery_window_in_days = 0
+}
+
+# see https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_version
+resource "aws_secretsmanager_secret_version" "example_docdb_master_secret" {
+  secret_id     = aws_secretsmanager_secret.example_docdb_master_secret.id
+  secret_string = local.example_docdb_master_connection_string
+}
+
 # see https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/docdb_cluster
 resource "aws_docdb_cluster" "example" {
   cluster_identifier           = var.name_prefix
@@ -60,19 +73,14 @@ resource "aws_security_group" "example_docdb" {
 
 # see https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_ingress_rule
 resource "aws_vpc_security_group_ingress_rule" "example_docdb_mongo" {
-  for_each = {
-    for i, cidr_block in module.vpc.intra_subnets_cidr_blocks : i => {
-      az        = module.vpc.azs[i]
-      cidr_ipv4 = cidr_block
-    }
-  }
+  for_each = { for i, cidr_block in module.vpc.intra_subnets_cidr_blocks : module.vpc.azs[i] => cidr_block }
 
   security_group_id = aws_security_group.example_docdb.id
   ip_protocol       = "tcp"
-  cidr_ipv4         = each.value.cidr_ipv4
+  cidr_ipv4         = each.value
   from_port         = local.example_docdb_port
   to_port           = local.example_docdb_port
   tags = {
-    Name = "${var.name_prefix}-docdb-mongo-${each.value.az}"
+    Name = "${var.name_prefix}-docdb-mongo-${each.key}"
   }
 }

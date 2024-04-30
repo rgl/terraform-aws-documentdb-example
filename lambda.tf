@@ -49,8 +49,21 @@ module "example_lambda_function" {
     }
   }
 
+  attach_policy_json = true
+  policy_json = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow",
+        Action   = ["secretsmanager:GetSecretValue"]
+        Resource = aws_secretsmanager_secret.example_docdb_master_secret.arn
+      },
+    ]
+  })
+
   environment_variables = {
-    EXAMPLE_DOCDB_CONNECTION_STRING = local.example_docdb_master_connection_string
+    EXAMPLE_DOCDB_CONNECTION_STRING_SECRET_REGION = var.region
+    EXAMPLE_DOCDB_CONNECTION_STRING_SECRET_ID     = aws_secretsmanager_secret.example_docdb_master_secret.name
   }
 }
 
@@ -64,21 +77,26 @@ resource "aws_security_group" "example_lambda_function" {
   }
 }
 
-# see https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_ingress_rule
+# see https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_egress_rule
 resource "aws_vpc_security_group_egress_rule" "example_lambda_function_mongo" {
-  for_each = {
-    for i, cidr_block in module.vpc.database_subnets_cidr_blocks : i => {
-      az        = module.vpc.azs[i]
-      cidr_ipv4 = cidr_block
-    }
-  }
+  for_each = { for i, cidr_block in module.vpc.database_subnets_cidr_blocks : module.vpc.azs[i] => cidr_block }
 
   security_group_id = aws_security_group.example_lambda_function.id
   ip_protocol       = "tcp"
-  cidr_ipv4         = each.value.cidr_ipv4
+  cidr_ipv4         = each.value
   from_port         = local.example_docdb_port
   to_port           = local.example_docdb_port
   tags = {
-    Name = "${var.name_prefix}-docdb-mongo-${each.value.az}"
+    Name = "${var.name_prefix}-docdb-mongo-${each.key}"
+  }
+}
+
+# see https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_egress_rule
+resource "aws_vpc_security_group_egress_rule" "example_lambda_function_vpc" {
+  security_group_id = aws_security_group.example_lambda_function.id
+  ip_protocol       = "all"
+  cidr_ipv4         = module.vpc.vpc_cidr_block
+  tags = {
+    Name = "${var.name_prefix}-vpc"
   }
 }
