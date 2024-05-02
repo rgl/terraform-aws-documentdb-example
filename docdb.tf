@@ -37,7 +37,7 @@ resource "aws_secretsmanager_secret_version" "example_docdb_master_secret" {
 resource "aws_docdb_cluster" "example" {
   cluster_identifier           = var.name_prefix
   availability_zones           = module.vpc.azs
-  db_subnet_group_name         = module.vpc.database_subnet_group
+  db_subnet_group_name         = module.vpc.database_subnet_group_name
   vpc_security_group_ids       = [aws_security_group.example_docdb.id]
   port                         = local.example_docdb_port
   engine                       = "docdb"
