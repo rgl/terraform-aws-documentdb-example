@@ -81,6 +81,6 @@ resource "aws_vpc_security_group_ingress_rule" "example_docdb_mongo" {
   from_port         = local.example_docdb_port
   to_port           = local.example_docdb_port
   tags = {
-    Name = "${var.name_prefix}-docdb-mongo-${each.key}"
+    Name = "${var.name_prefix}-intra-${each.key}-docdb-mongo"
   }
 }
