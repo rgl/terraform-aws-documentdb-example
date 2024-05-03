@@ -5,12 +5,12 @@ module "vpc" {
   version = "5.8.1"
 
   name             = var.name_prefix
-  azs              = ["${var.region}a", "${var.region}b", "${var.region}c"]
+  azs              = ["${var.region}a", "${var.region}b"]
   cidr             = "10.0.0.0/16"
-  public_subnets   = ["10.0.10.0/24", "10.0.11.0/24", "10.0.12.0/24"]
-  private_subnets  = ["10.0.20.0/24", "10.0.21.0/24", "10.0.22.0/24"]
-  database_subnets = ["10.0.30.0/24", "10.0.31.0/24", "10.0.32.0/24"]
-  intra_subnets    = ["10.0.40.0/24", "10.0.41.0/24", "10.0.42.0/24"]
+  public_subnets   = ["10.0.10.0/24", "10.0.11.0/24"]
+  private_subnets  = ["10.0.20.0/24", "10.0.21.0/24"]
+  database_subnets = ["10.0.30.0/24", "10.0.31.0/24"]
+  intra_subnets    = ["10.0.40.0/24", "10.0.41.0/24"]
 }
 
 # see https://registry.terraform.io/modules/terraform-aws-modules/vpc/aws/latest/submodules/vpc-endpoints
