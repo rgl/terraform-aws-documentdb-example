@@ -13,7 +13,7 @@ locals {
 # see https://github.com/terraform-aws-modules/terraform-aws-lambda
 module "example_docker_image" {
   source  = "terraform-aws-modules/lambda/aws//modules/docker-build"
-  version = "7.2.6"
+  version = "7.4.0"
 
   create_ecr_repo = true
   ecr_repo        = var.name_prefix
@@ -27,7 +27,7 @@ module "example_docker_image" {
 # see https://github.com/terraform-aws-modules/terraform-aws-lambda
 module "example_lambda_function" {
   source  = "terraform-aws-modules/lambda/aws"
-  version = "7.2.6"
+  version = "7.4.0"
 
   vpc_subnet_ids         = module.vpc.intra_subnets
   vpc_security_group_ids = [aws_security_group.example_lambda_function.id]
